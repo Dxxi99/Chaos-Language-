@@ -130,7 +130,16 @@ static void stmt(AstNode* n) {
         case AST_FUNC_DEF:define_fn(n);break;
         case AST_RETURN:ret_v=n->ret.value?expr(n->ret.value):LLVMConstInt(I64,0,0);LLVMBuildRet(b,ret_v);break;
         case AST_VAR_ASSIGN:{Var* v=get_v(n->var_assign.name);if(v){if(!v->m){fprintf(stderr,"Error: Cannot reassign to immutable variable \"%s\"\n",n->var_assign.name);exit(1);}LLVMBuildStore(b,expr(n->var_assign.value),v->p);}break;}
-        case AST_VAR_DECL:decl_var(n);break;
+        case AST_VAR_DECL:{
+    // Type checking
+    if(n->var_decl.value){
+        if(n->var_decl.value->type==AST_STRING && n->var_decl.name[0]){
+            // text 변수에 문자열 할당 OK
+        }
+    }
+    decl_var(n);
+    break;
+}
         case AST_PRINT:print_stmt(n);break;
         case AST_IF:if_stmt(n);break;
         case AST_WHILE:while_stmt(n);break;
