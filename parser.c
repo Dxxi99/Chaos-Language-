@@ -8,7 +8,25 @@ extern AstNode* import_file(const char* path);
 
 static char* struct_names[32]; static int struct_name_count = 0;
 static int is_struct_type(const char* name) { for (int i = 0; i < struct_name_count; i++) if (strcmp(struct_names[i], name) == 0) return 1; return 0; }
-static void expect(TokenType t) { if (current_token.type != t) { fprintf(stderr,"Error at line %d: expected %s but got '%s'\n",current_token.line, token_name(t), current_token.lexeme); exit(1); } lexer_next(); }
+
+static void synchronize() {
+    lexer_next();
+    while (current_token.type != TOK_EOF) {
+        if (current_token.type == TOK_NEWLINE || current_token.type == TOK_END) {
+            lexer_next();
+            return;
+        }
+        switch (current_token.type) {
+            case TOK_IF: case TOK_WHILE: case TOK_FUNC: case TOK_STRUCT:
+            case TOK_FOR: case TOK_DO: case TOK_PRINT: case TOK_RETURN:
+                return;
+            default:
+                lexer_next();
+        }
+    }
+}
+
+static void expect(TokenType t) { if (current_token.type != t) { fprintf(stderr,"Error at line %d: expected %s but got '%s'\n",current_token.line, token_name(t), current_token.lexeme); synchronize(); return; } lexer_next(); }
 static void skip_nl() { while (current_token.type == TOK_NEWLINE) lexer_next(); }
 static AstNode* parse_expr();
 static AstNode* parse_block();
