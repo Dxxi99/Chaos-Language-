@@ -180,7 +180,7 @@ static void for_in_list(AstNode* n) {
 }
 
 static void stmt_call(AstNode* n) {
-    if(strcmp(n->func_call.name,"writeFile")==0){call_builtin(n);return;}if(strcmp(n->func_call.name,"push")==0||strcmp(n->func_call.name,"append")==0){Var* v=get_v(n->func_call.args[0]->ident.name);if(v&&v->l){LLVMTypeRef ty=list_ty();LLVMValueRef dp=LLVMBuildLoad2(b,I64P,LLVMBuildStructGEP2(b,ty,v->p,0,""),"");LLVMValueRef lenp=LLVMBuildStructGEP2(b,ty,v->p,1,"");LLVMValueRef len=LLVMBuildLoad2(b,I64,lenp,"");LLVMValueRef capp=LLVMBuildStructGEP2(b,ty,v->p,2,"");LLVMValueRef cap=LLVMBuildLoad2(b,I64,capp,"");LLVMValueRef val=expr(n->func_call.args[1]);LLVMBuildStore(b,val,LLVMBuildGEP2(b,I64,dp,&len,1,""));LLVMBuildStore(b,LLVMBuildAdd(b,len,LLVMConstInt(I64,1,0),""),lenp);}}
+    if(strcmp(n->func_call.name,"writeFile")==0){call_builtin(n);return;}if(strcmp(n->func_call.name,"push")==0||strcmp(n->func_call.name,"append")==0){Var* v=get_v(n->func_call.args[0]->ident.name);if(v&&v->l){LLVMTypeRef ty=list_ty();LLVMValueRef dp=LLVMBuildLoad2(b,I64P,LLVMBuildStructGEP2(b,ty,v->p,0,""),"");LLVMValueRef lenp=LLVMBuildStructGEP2(b,ty,v->p,1,"");LLVMValueRef len=LLVMBuildLoad2(b,I64,lenp,"");LLVMValueRef capp=LLVMBuildStructGEP2(b,ty,v->p,2,"");LLVMValueRef val=expr(n->func_call.args[1]);LLVMBuildStore(b,val,LLVMBuildGEP2(b,I64,dp,&len,1,""));LLVMBuildStore(b,LLVMBuildAdd(b,len,LLVMConstInt(I64,1,0),""),lenp);}}
 }
 
 static void decl_all(AstNode*n){if(!n)return;if(n->type==AST_FUNC_DEF)declare_fn(n);if(n->type==AST_BLOCK||n->type==AST_PROGRAM)for(int i=0;i<n->block.count;i++)decl_all(n->block.statements[i]);}
