@@ -1,4 +1,3 @@
-#include "symbol_table.h"
 // codegen.c - Chaos LLVM Code Generator (Clean)
 #include "codegen.h"
 #include "lexer.h"
@@ -21,15 +20,15 @@ static LLVMTypeRef fopen_ty, fread_ty, fclose_ty;
 static LLVMTypeRef tm_args[2];
 
 // Symbol tables
-Var vars[256]; int vc;
-Struct st[32]; int sc;
-Func fns[32]; int fc;
+typedef struct { char* n; LLVMValueRef p; int s,f,l,flt,m; LLVMTypeRef t; } Var;
+typedef struct { char* n; char** fs; char** ft; int fc; } Struct;
+typedef struct { char* n; LLVMValueRef fn; LLVMTypeRef ty; int pc; } Func;
 
 #define I64 LLVMInt64Type()
 #define I1 LLVMInt1Type()
 #define I8P LLVMPointerType(LLVMInt8Type(),0)
 #define I64P LLVMPointerType(I64,0)
-// list_ty -> symbol_table.c; return LLVMStructType(f,3,0); }
+static LLVMTypeRef list_ty() { LLVMTypeRef f[]={I64P,I64,I64}; return LLVMStructType(f,3,0); }
 
 static LLVMValueRef call_builtin(AstNode* n);
 static void declare_fn(AstNode* n);
@@ -56,13 +55,13 @@ void codegen_init(const char* fn) {
     LLVMTypeRef a6[]={I8P}; fclose_ty=LLVMFunctionType(LLVMInt32Type(),a6,1,0); LLVMAddFunction(mod,"fclose",fclose_ty);LLVMTypeRef tm_args[]={LLVMInt32Type(),I8P};tm_args[0]=LLVMInt32Type(); tm_args[1]=I8P; LLVMAddFunction(mod,"clock_gettime",LLVMFunctionType(LLVMInt32Type(),tm_args,2,0));
 }
 
-// clr -> symbol_table.c
-// add_st -> symbol_table.cst[sc].fc=c;sc++; }
-// get_st -> symbol_table.c
-// get_fn -> symbol_table.c
-// get_v -> symbol_table.c
-// set_v -> symbol_table.c }
-// st_ty -> symbol_table.c
+static void clr() { vc=0; }
+static void add_st(const char* n, char** fs, char** ft, int c) { st[sc].n=strdup(n);st[sc].fs=malloc(c*8);st[sc].ft=malloc(c*8);for(int i=0;i<c;i++){st[sc].fs[i]=strdup(fs[i]);st[sc].ft[i]=strdup(ft[i]);}st[sc].fc=c;sc++; }
+static Struct* get_st(const char* n) { for(int i=0;i<sc;i++)if(strcmp(st[i].n,n)==0)return &st[i]; return 0; }
+static Func* get_fn(const char* n) { for(int i=0;i<fc;i++)if(strcmp(fns[i].n,n)==0)return &fns[i]; return 0; }
+static Var* get_v(const char* n) { for(int i=0;i<vc;i++)if(vars[i].n&&strcmp(vars[i].n,n)==0)return &vars[i]; return 0; }
+static void set_v(const char* n, LLVMValueRef p, int s, int f, LLVMTypeRef t, int l, int flt, int m) { if(vc<256){vars[vc].n=strdup(n);vars[vc].p=p;vars[vc].s=s;vars[vc].f=f;vars[vc].t=t;vars[vc].l=l;vars[vc].flt=flt;vars[vc].m=m;vc++;} }
+static LLVMTypeRef st_ty(const char* n) { Struct* si=get_st(n);if(!si)return 0;LLVMTypeRef* fs=malloc(8*si->fc);for(int i=0;i<si->fc;i++)fs[i]=strcmp(si->ft[i],"text")==0?I8P:I64;LLVMTypeRef r=LLVMStructType(fs,si->fc,0);free(fs);return r; }
 
 static LLVMValueRef expr(AstNode* n) {
     if(!n)return LLVMConstInt(I64,0,0);
@@ -161,26 +160,9 @@ if(n->var_decl.value&&n->var_decl.value->type==AST_FUNC_CALL){const char* nm=n->
 
 static void print_stmt(AstNode* n) {for(int i=0;i<n->print.arg_count;i++){AstNode* pe=n->print.args[i];if(pe->type==AST_STRING)pr(expr(pe),1,0,0);else if(pe->type==AST_FIELD_ACCESS){LLVMValueRef v=expr(pe);pr(v,LLVMGetTypeKind(LLVMTypeOf(v))==LLVMPointerTypeKind,0,0);}else if(pe->type==AST_IDENT){LLVMValueRef val=expr(pe);Var* v=get_v(pe->ident.name);pr(val,v?v->s:0,v?v->f:0,v?v->flt:0);}else if(pe->type==AST_FUNC_CALL){const char* nm=pe->func_call.name;pr(expr(pe),strcmp(nm,"concat")==0||strcmp(nm,"readFile")==0||strcmp(nm,"input")==0,0,(strcmp(nm,"sqrt")==0||strcmp(nm,"sin")==0||strcmp(nm,"cos")==0||strcmp(nm,"log")==0)?1:0);}else if(pe->type==AST_BINARY){LLVMValueRef v=expr(pe);pr(v,LLVMGetTypeKind(LLVMTypeOf(v))==LLVMPointerTypeKind,0,LLVMGetTypeKind(LLVMTypeOf(v))==LLVMDoubleTypeKind?1:0);}else pr(expr(pe),0,0,0);}}
 
-static void gen_if(AstNode* n, LLVMBasicBlockRef merge_bb) {
-    LLVMValueRef raw=expr(n->if_stmt.cond);
-    if(LLVMGetTypeKind(LLVMTypeOf(raw))==LLVMIntegerTypeKind)raw=LLVMBuildZExt(b,raw,I64,"");
-    LLVMValueRef cond=LLVMBuildICmp(b,LLVMIntNE,raw,LLVMConstInt(I64,0,0),"");
-    LLVMBasicBlockRef t=LLVMAppendBasicBlock(cur_fn,"t"),e=LLVMAppendBasicBlock(cur_fn,"e");
-    LLVMBuildCondBr(b,cond,t,e);
-    LLVMPositionBuilderAtEnd(b,t);stmt(n->if_stmt.then_body);
-    if(!LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(b)))LLVMBuildBr(b,merge_bb);
-    LLVMPositionBuilderAtEnd(b,e);
-    if(n->if_stmt.else_body){
-        if(n->if_stmt.else_body->type==AST_IF)gen_if(n->if_stmt.else_body,merge_bb);
-        else{stmt(n->if_stmt.else_body);if(!LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(b)))LLVMBuildBr(b,merge_bb);}
-    }else{if(!LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(b)))LLVMBuildBr(b,merge_bb);}
-}
 static void if_stmt(AstNode* n) {
-    LLVMBasicBlockRef m=LLVMAppendBasicBlock(cur_fn,"m");
-    gen_if(n,m);
-    LLVMPositionBuilderAtEnd(b,m);
+    LLVMValueRef raw=expr(n->if_stmt.cond);if(LLVMGetTypeKind(LLVMTypeOf(raw))==LLVMIntegerTypeKind)raw=LLVMBuildZExt(b,raw,I64,"");LLVMValueRef cond=LLVMBuildICmp(b,LLVMIntNE,raw,LLVMConstInt(I64,0,0),"");LLVMBasicBlockRef t=LLVMAppendBasicBlock(cur_fn,"t"),e=LLVMAppendBasicBlock(cur_fn,"e"),m=LLVMAppendBasicBlock(cur_fn,"m");LLVMBuildCondBr(b,cond,t,e);LLVMPositionBuilderAtEnd(b,t);stmt(n->if_stmt.then_body);if(!LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(b)))LLVMBuildBr(b,m);LLVMPositionBuilderAtEnd(b,e);if(n->if_stmt.else_body)stmt(n->if_stmt.else_body);if(!LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(b)))LLVMBuildBr(b,m);LLVMPositionBuilderAtEnd(b,m);
 }
-// removed
 
 static void while_stmt(AstNode* n) {LLVMBasicBlockRef c=LLVMAppendBasicBlock(cur_fn,"wc"),b2=LLVMAppendBasicBlock(cur_fn,"wb"),e=LLVMAppendBasicBlock(cur_fn,"we");loop_end=e;loop_cond=c;LLVMBuildBr(b,c);LLVMPositionBuilderAtEnd(b,c);LLVMBuildCondBr(b,LLVMBuildICmp(b,LLVMIntNE,LLVMBuildZExt(b,expr(n->while_stmt.cond),I64,""),LLVMConstInt(I64,0,0),""),b2,e);LLVMPositionBuilderAtEnd(b,b2);stmt(n->while_stmt.body);if(!LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(b)))LLVMBuildBr(b,c);LLVMPositionBuilderAtEnd(b,e);}
 
