@@ -17,9 +17,10 @@ static LLVMBasicBlockRef loop_end, loop_cond;
 // Function types
 static LLVMTypeRef scanf_ty, strlen_ty, malloc_ty, strcpy_ty, strcat_ty;
 static LLVMTypeRef fopen_ty, fread_ty, fclose_ty;
+static LLVMTypeRef tm_args[2];
 
 // Symbol tables
-typedef struct { char* n; LLVMValueRef p; int s,f,l,flt; LLVMTypeRef t; } Var;
+typedef struct { char* n; LLVMValueRef p; int s,f,l,flt,m; LLVMTypeRef t; } Var;
 static Var vars[256]; static int vc;
 typedef struct { char* n; char** fs; char** ft; int fc; } Struct;
 static Struct st[32]; static int sc;
@@ -54,7 +55,7 @@ void codegen_init(const char* fn) {
     LLVMTypeRef a4[]={LLVMDoubleType(),LLVMDoubleType()}; LLVMAddFunction(mod,"llvm.pow.f64",LLVMFunctionType(LLVMDoubleType(),a4,2,0));LLVMTypeRef a7[]={LLVMDoubleType()};LLVMAddFunction(mod,"llvm.sqrt.f64",LLVMFunctionType(LLVMDoubleType(),a7,1,0));LLVMAddFunction(mod,"llvm.sin.f64",LLVMFunctionType(LLVMDoubleType(),a7,1,0));LLVMAddFunction(mod,"llvm.cos.f64",LLVMFunctionType(LLVMDoubleType(),a7,1,0));LLVMAddFunction(mod,"llvm.log.f64",LLVMFunctionType(LLVMDoubleType(),a7,1,0));
     fopen_ty=LLVMFunctionType(I8P,a3,2,0); LLVMAddFunction(mod,"fopen",fopen_ty);
     LLVMTypeRef a5[]={I8P,I64,I64,I8P}; fread_ty=LLVMFunctionType(I64,a5,4,0); LLVMAddFunction(mod,"fread",fread_ty);LLVMAddFunction(mod,"fwrite",fread_ty);
-    LLVMTypeRef a6[]={I8P}; fclose_ty=LLVMFunctionType(LLVMInt32Type(),a6,1,0); LLVMAddFunction(mod,"fclose",fclose_ty);
+    LLVMTypeRef a6[]={I8P}; fclose_ty=LLVMFunctionType(LLVMInt32Type(),a6,1,0); LLVMAddFunction(mod,"fclose",fclose_ty);LLVMTypeRef tm_args[]={LLVMInt32Type(),I8P};tm_args[0]=LLVMInt32Type(); tm_args[1]=I8P; LLVMAddFunction(mod,"clock_gettime",LLVMFunctionType(LLVMInt32Type(),tm_args,2,0));
 }
 
 static void clr() { vc=0; }
@@ -62,7 +63,7 @@ static void add_st(const char* n, char** fs, char** ft, int c) { st[sc].n=strdup
 static Struct* get_st(const char* n) { for(int i=0;i<sc;i++)if(strcmp(st[i].n,n)==0)return &st[i]; return 0; }
 static Func* get_fn(const char* n) { for(int i=0;i<fc;i++)if(strcmp(fns[i].n,n)==0)return &fns[i]; return 0; }
 static Var* get_v(const char* n) { for(int i=0;i<vc;i++)if(vars[i].n&&strcmp(vars[i].n,n)==0)return &vars[i]; return 0; }
-static void set_v(const char* n, LLVMValueRef p, int s, int f, LLVMTypeRef t, int l, int flt) { if(vc<256){vars[vc].n=strdup(n);vars[vc].p=p;vars[vc].s=s;vars[vc].f=f;vars[vc].t=t;vars[vc].l=l;vars[vc].flt=flt;vc++;} }
+static void set_v(const char* n, LLVMValueRef p, int s, int f, LLVMTypeRef t, int l, int flt, int m) { if(vc<256){vars[vc].n=strdup(n);vars[vc].p=p;vars[vc].s=s;vars[vc].f=f;vars[vc].t=t;vars[vc].l=l;vars[vc].flt=flt;vars[vc].m=m;vc++;} }
 static LLVMTypeRef st_ty(const char* n) { Struct* si=get_st(n);if(!si)return 0;LLVMTypeRef* fs=malloc(8*si->fc);for(int i=0;i<si->fc;i++)fs[i]=strcmp(si->ft[i],"text")==0?I8P:I64;LLVMTypeRef r=LLVMStructType(fs,si->fc,0);free(fs);return r; }
 
 static LLVMValueRef expr(AstNode* n) {
@@ -130,12 +131,12 @@ static void stmt(AstNode* n) {
         case AST_STRUCT_DEF:add_st(n->struct_def.name,n->struct_def.field_names,n->struct_def.field_types,n->struct_def.field_count);break;
         case AST_FUNC_DEF:define_fn(n);break;
         case AST_RETURN:ret_v=n->ret.value?expr(n->ret.value):LLVMConstInt(I64,0,0);LLVMBuildRet(b,ret_v);break;
-        case AST_VAR_ASSIGN:{Var* v=get_v(n->var_assign.name);if(v)LLVMBuildStore(b,expr(n->var_assign.value),v->p);break;}
+        case AST_VAR_ASSIGN:{Var* v=get_v(n->var_assign.name);if(v){if(!v->m){fprintf(stderr,"Error: Cannot reassign to immutable variable \"%s\"\n",n->var_assign.name);exit(1);}LLVMBuildStore(b,expr(n->var_assign.value),v->p);}break;}
         case AST_VAR_DECL:decl_var(n);break;
         case AST_PRINT:print_stmt(n);break;
         case AST_IF:if_stmt(n);break;
         case AST_WHILE:while_stmt(n);break;
-        case AST_FOR:for_stmt(n);break;
+        case AST_PROFILE:{LLVMValueRef ts=LLVMBuildAlloca(b,LLVMArrayType(I64,2),"ts");LLVMValueRef cv=LLVMConstInt(LLVMInt32Type(),0,0);LLVMValueRef ct=LLVMGetNamedFunction(mod,"clock_gettime");if(ct){LLVMBuildCall2(b,LLVMFunctionType(LLVMInt32Type(),tm_args,2,0),ct,(LLVMValueRef[]){cv,ts},2,"");}stmt(n->profile.body);if(ct){LLVMValueRef ts2=LLVMBuildAlloca(b,LLVMArrayType(I64,2),"ts2");LLVMBuildCall2(b,LLVMFunctionType(LLVMInt32Type(),tm_args,2,0),ct,(LLVMValueRef[]){cv,ts2},2,"");LLVMValueRef start=LLVMBuildLoad2(b,I64,LLVMBuildStructGEP2(b,LLVMArrayType(I64,2),ts,0,""),"");LLVMValueRef end=LLVMBuildLoad2(b,I64,LLVMBuildStructGEP2(b,LLVMArrayType(I64,2),ts2,0,""),"");LLVMValueRef diff=LLVMBuildSub(b,end,start,"");LLVMValueRef pf=LLVMGetNamedFunction(mod,"printf");LLVMValueRef fmt=LLVMBuildGlobalStringPtr(b,"Profile: %lld ns\n","");LLVMBuildCall2(b,LLVMFunctionType(LLVMInt32Type(),(LLVMTypeRef[]){I8P},1,1),pf,(LLVMValueRef[]){fmt,diff},2,"");}break;}case AST_FOR:for_stmt(n);break;
         case AST_FUNC_CALL:stmt_call(n);break;
         case AST_BLOCK:case AST_PROGRAM:for(int i=0;i<n->block.count;i++)stmt(n->block.statements[i]);break;
         case AST_BREAK:if(loop_end)LLVMBuildBr(b,loop_end);break;
@@ -145,19 +146,19 @@ static void stmt(AstNode* n) {
 }
 
 static void declare_fn(AstNode* n) {if(get_fn(n->func_def.name))return;LLVMTypeRef* ps=malloc(8*n->func_def.param_count);for(int i=0;i<n->func_def.param_count;i++)ps[i]=I64;LLVMTypeRef rty=I64;if(strncmp(n->func_def.name,"make",4)==0){Struct* si=get_st(n->func_def.name+4);if(si)rty=st_ty(n->func_def.name+4);}LLVMTypeRef fty=LLVMFunctionType(rty,ps,n->func_def.param_count,0);LLVMValueRef fn=LLVMAddFunction(mod,n->func_def.name,fty);fns[fc].n=strdup(n->func_def.name);fns[fc].fn=fn;fns[fc].ty=fty;fns[fc].pc=n->func_def.param_count;fc++;free(ps);}
-static void define_fn(AstNode* n) {Func* fi=get_fn(n->func_def.name);if(!fi)return;LLVMValueRef old=cur_fn;Var ov[256];int oc=vc;memcpy(ov,vars,sizeof(vars));LLVMValueRef orv=ret_v;cur_fn=fi->fn;ret_v=0;clr();LLVMBasicBlockRef fe=LLVMAppendBasicBlock(cur_fn,"e");LLVMPositionBuilderAtEnd(b,fe);for(int j=0;j<n->func_def.param_count;j++){LLVMValueRef p=LLVMGetParam(fi->fn,j);LLVMValueRef a=LLVMBuildAlloca(b,I64,n->func_def.params[j]);LLVMBuildStore(b,p,a);set_v(n->func_def.params[j],a,0,0,0,0,0);}stmt(n->func_def.body);if(!ret_v)ret_v=LLVMConstInt(I64,0,0);if(!LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(b)))LLVMBuildRet(b,ret_v);cur_fn=old;memcpy(vars,ov,sizeof(vars));vc=oc;ret_v=orv;LLVMPositionBuilderAtEnd(b,LLVMGetFirstBasicBlock(main_fn));}
+static void define_fn(AstNode* n) {Func* fi=get_fn(n->func_def.name);if(!fi)return;LLVMValueRef old=cur_fn;Var ov[256];int oc=vc;memcpy(ov,vars,sizeof(vars));LLVMValueRef orv=ret_v;cur_fn=fi->fn;ret_v=0;clr();LLVMBasicBlockRef fe=LLVMAppendBasicBlock(cur_fn,"e");LLVMPositionBuilderAtEnd(b,fe);for(int j=0;j<n->func_def.param_count;j++){LLVMValueRef p=LLVMGetParam(fi->fn,j);LLVMValueRef a=LLVMBuildAlloca(b,I64,n->func_def.params[j]);LLVMBuildStore(b,p,a);set_v(n->func_def.params[j],a,0,0,0,0,0,1);}stmt(n->func_def.body);if(!ret_v)ret_v=LLVMConstInt(I64,0,0);if(!LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(b)))LLVMBuildRet(b,ret_v);cur_fn=old;memcpy(vars,ov,sizeof(vars));vc=oc;ret_v=orv;LLVMPositionBuilderAtEnd(b,LLVMGetFirstBasicBlock(main_fn));}
 
 static void decl_var(AstNode* n) {
     int s=0,f=0,l=0,st=0,flt=0;LLVMTypeRef ty=I64;LLVMValueRef init=0;Struct* si=0;
     if(n->var_decl.value&&n->var_decl.value->type==AST_STRUCT_CREATE){si=get_st(n->var_decl.value->struct_create.struct_name);if(si){ty=st_ty(n->var_decl.value->struct_create.struct_name);st=1;}}
 if(n->var_decl.value&&n->var_decl.value->type==AST_FUNC_CALL){const char* nm=n->var_decl.value->func_call.name;if(strcmp(nm,"concat")==0||strcmp(nm,"readFile")==0||strcmp(nm,"input")==0){s=1;ty=I8P;}else if(strcmp(nm,"sqrt")==0){ty=LLVMDoubleType();flt=1;}else if(strncmp(nm,"make",4)==0){Struct* fsi=get_st(nm+4);if(fsi){ty=st_ty(nm+4);st=1;si=fsi;}}}
-    if(st&&si){init=expr(n->var_decl.value);LLVMValueRef a=LLVMBuildAlloca(b,ty,n->var_decl.name);LLVMBuildStore(b,init,a);set_v(n->var_decl.name,a,0,0,ty,0,0);return;}
+    if(st&&si){init=expr(n->var_decl.value);LLVMValueRef a=LLVMBuildAlloca(b,ty,n->var_decl.name);LLVMBuildStore(b,init,a);set_v(n->var_decl.name,a,0,0,ty,0,0,1);return;}
     if(n->var_decl.value&&n->var_decl.value->type==AST_LIST){ty=list_ty();l=1;init=expr(n->var_decl.value);}
     else if(n->var_decl.value&&n->var_decl.value->type==AST_STRING){ty=I8P;s=1;init=expr(n->var_decl.value);}
     else if(n->var_decl.value&&n->var_decl.value->type==AST_BOOL){ty=I1;f=1;init=expr(n->var_decl.value);}else if(n->var_decl.value&&n->var_decl.value->type==AST_BINARY){init=expr(n->var_decl.value);if(LLVMGetTypeKind(LLVMTypeOf(init))==LLVMDoubleTypeKind){ty=LLVMDoubleType();flt=1;}else if(LLVMGetTypeKind(LLVMTypeOf(init))==LLVMPointerTypeKind){ty=I8P;s=1;}}else if(n->var_decl.value&&n->var_decl.value->type==AST_NUMBER&&n->var_decl.value->number.is_float){ty=LLVMDoubleType();flt=1;init=expr(n->var_decl.value);}
     else init=n->var_decl.value?expr(n->var_decl.value):LLVMConstInt(I64,0,0);
     LLVMValueRef a=LLVMBuildAlloca(b,ty,n->var_decl.name);if(l)a=init;else LLVMBuildStore(b,init,a);
-    set_v(n->var_decl.name,a,s,f,ty,l,flt);
+    set_v(n->var_decl.name,a,s,f,ty,l,flt,n->var_decl.is_mutable);
 }
 
 static void print_stmt(AstNode* n) {for(int i=0;i<n->print.arg_count;i++){AstNode* pe=n->print.args[i];if(pe->type==AST_STRING)pr(expr(pe),1,0,0);else if(pe->type==AST_FIELD_ACCESS){LLVMValueRef v=expr(pe);pr(v,LLVMGetTypeKind(LLVMTypeOf(v))==LLVMPointerTypeKind,0,0);}else if(pe->type==AST_IDENT){LLVMValueRef val=expr(pe);Var* v=get_v(pe->ident.name);pr(val,v?v->s:0,v?v->f:0,v?v->flt:0);}else if(pe->type==AST_FUNC_CALL){const char* nm=pe->func_call.name;pr(expr(pe),strcmp(nm,"concat")==0||strcmp(nm,"readFile")==0||strcmp(nm,"input")==0,0,(strcmp(nm,"sqrt")==0||strcmp(nm,"sin")==0||strcmp(nm,"cos")==0||strcmp(nm,"log")==0)?1:0);}else if(pe->type==AST_BINARY){LLVMValueRef v=expr(pe);pr(v,LLVMGetTypeKind(LLVMTypeOf(v))==LLVMPointerTypeKind,0,LLVMGetTypeKind(LLVMTypeOf(v))==LLVMDoubleTypeKind?1:0);}else pr(expr(pe),0,0,0);}}
@@ -170,12 +171,12 @@ static void while_stmt(AstNode* n) {LLVMBasicBlockRef c=LLVMAppendBasicBlock(cur
 
 static void for_stmt(AstNode* n) {
     if(n->for_stmt.end==NULL){for_in_list(n);return;}
-    LLVMValueRef s=expr(n->for_stmt.start),ed=expr(n->for_stmt.end);LLVMValueRef it=LLVMBuildAlloca(b,I64,"i");LLVMBuildStore(b,s,it);set_v(n->for_stmt.var,it,0,0,0,0,0);LLVMBasicBlockRef c=LLVMAppendBasicBlock(cur_fn,"fc"),b2=LLVMAppendBasicBlock(cur_fn,"fb"),i=LLVMAppendBasicBlock(cur_fn,"fi"),e=LLVMAppendBasicBlock(cur_fn,"fe");loop_end=e;loop_cond=c;LLVMBuildBr(b,c);LLVMPositionBuilderAtEnd(b,c);LLVMValueRef cur=LLVMBuildLoad2(b,I64,it,"");LLVMBuildCondBr(b,LLVMBuildICmp(b,LLVMIntSLE,cur,ed,""),b2,e);LLVMPositionBuilderAtEnd(b,b2);stmt(n->for_stmt.body);if(!LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(b)))LLVMBuildBr(b,i);LLVMPositionBuilderAtEnd(b,i);LLVMBuildStore(b,LLVMBuildAdd(b,cur,LLVMConstInt(I64,1,0),""),it);LLVMBuildBr(b,c);LLVMPositionBuilderAtEnd(b,e);
+    LLVMValueRef s=expr(n->for_stmt.start),ed=expr(n->for_stmt.end);LLVMValueRef it=LLVMBuildAlloca(b,I64,"i");LLVMBuildStore(b,s,it);set_v(n->for_stmt.var,it,0,0,0,0,0,1);LLVMBasicBlockRef c=LLVMAppendBasicBlock(cur_fn,"fc"),b2=LLVMAppendBasicBlock(cur_fn,"fb"),i=LLVMAppendBasicBlock(cur_fn,"fi"),e=LLVMAppendBasicBlock(cur_fn,"fe");loop_end=e;loop_cond=c;LLVMBuildBr(b,c);LLVMPositionBuilderAtEnd(b,c);LLVMValueRef cur=LLVMBuildLoad2(b,I64,it,"");LLVMBuildCondBr(b,LLVMBuildICmp(b,LLVMIntSLE,cur,ed,""),b2,e);LLVMPositionBuilderAtEnd(b,b2);stmt(n->for_stmt.body);if(!LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(b)))LLVMBuildBr(b,i);LLVMPositionBuilderAtEnd(b,i);LLVMBuildStore(b,LLVMBuildAdd(b,cur,LLVMConstInt(I64,1,0),""),it);LLVMBuildBr(b,c);LLVMPositionBuilderAtEnd(b,e);
 }
 
 static void for_in_list(AstNode* n) {
     Var* v=get_v(n->for_stmt.start->ident.name);if(!v||!v->l)return;
-    LLVMTypeRef ty=list_ty();LLVMValueRef dp=LLVMBuildLoad2(b,I64P,LLVMBuildStructGEP2(b,ty,v->p,0,""),"");LLVMValueRef lenp=LLVMBuildStructGEP2(b,ty,v->p,1,"");LLVMValueRef len=LLVMBuildLoad2(b,I64,lenp,"");LLVMValueRef it=LLVMBuildAlloca(b,I64,"i");LLVMBuildStore(b,LLVMConstInt(I64,0,0),it);LLVMBasicBlockRef c=LLVMAppendBasicBlock(cur_fn,"fc"),b2=LLVMAppendBasicBlock(cur_fn,"fb"),e=LLVMAppendBasicBlock(cur_fn,"fe");loop_end=e;loop_cond=c;LLVMBuildBr(b,c);LLVMPositionBuilderAtEnd(b,c);LLVMValueRef idx=LLVMBuildLoad2(b,I64,it,"");LLVMBuildCondBr(b,LLVMBuildICmp(b,LLVMIntSLT,idx,len,""),b2,e);LLVMPositionBuilderAtEnd(b,b2);LLVMValueRef elem=LLVMBuildLoad2(b,I64,LLVMBuildGEP2(b,I64,dp,&idx,1,""),"");LLVMValueRef var=LLVMBuildAlloca(b,I64,"v");LLVMBuildStore(b,elem,var);set_v(n->for_stmt.var,var,0,0,0,0,0);stmt(n->for_stmt.body);if(!LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(b))){LLVMBuildStore(b,LLVMBuildAdd(b,idx,LLVMConstInt(I64,1,0),""),it);LLVMBuildBr(b,c);}LLVMPositionBuilderAtEnd(b,e);
+    LLVMTypeRef ty=list_ty();LLVMValueRef dp=LLVMBuildLoad2(b,I64P,LLVMBuildStructGEP2(b,ty,v->p,0,""),"");LLVMValueRef lenp=LLVMBuildStructGEP2(b,ty,v->p,1,"");LLVMValueRef len=LLVMBuildLoad2(b,I64,lenp,"");LLVMValueRef it=LLVMBuildAlloca(b,I64,"i");LLVMBuildStore(b,LLVMConstInt(I64,0,0),it);LLVMBasicBlockRef c=LLVMAppendBasicBlock(cur_fn,"fc"),b2=LLVMAppendBasicBlock(cur_fn,"fb"),e=LLVMAppendBasicBlock(cur_fn,"fe");loop_end=e;loop_cond=c;LLVMBuildBr(b,c);LLVMPositionBuilderAtEnd(b,c);LLVMValueRef idx=LLVMBuildLoad2(b,I64,it,"");LLVMBuildCondBr(b,LLVMBuildICmp(b,LLVMIntSLT,idx,len,""),b2,e);LLVMPositionBuilderAtEnd(b,b2);LLVMValueRef elem=LLVMBuildLoad2(b,I64,LLVMBuildGEP2(b,I64,dp,&idx,1,""),"");LLVMValueRef var=LLVMBuildAlloca(b,I64,"v");LLVMBuildStore(b,elem,var);set_v(n->for_stmt.var,var,0,0,0,0,0,1);stmt(n->for_stmt.body);if(!LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(b))){LLVMBuildStore(b,LLVMBuildAdd(b,idx,LLVMConstInt(I64,1,0),""),it);LLVMBuildBr(b,c);}LLVMPositionBuilderAtEnd(b,e);
 }
 
 static void stmt_call(AstNode* n) {

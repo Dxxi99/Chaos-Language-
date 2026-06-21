@@ -6,7 +6,7 @@ typedef enum {
     AST_IF, AST_FOR, AST_WHILE, AST_FUNC_DEF, AST_STRUCT_DEF,
     AST_STRUCT_CREATE, AST_FIELD_ACCESS, AST_FUNC_CALL,
     AST_LIST, AST_INDEX,
-    AST_RETURN, AST_BREAK, AST_CONTINUE, AST_BLOCK, AST_BINARY, AST_NUMBER, AST_STRING, AST_BOOL, AST_IDENT
+    AST_RETURN, AST_BREAK, AST_CONTINUE, AST_PROFILE, AST_BLOCK, AST_BINARY, AST_NUMBER, AST_STRING, AST_BOOL, AST_IDENT
 } AstNodeType;
 
 typedef struct AstNode {
@@ -26,6 +26,7 @@ typedef struct AstNode {
         struct { struct AstNode** elements; int count; } list;
         struct { struct AstNode* object; struct AstNode* index; } index_expr;
         struct { struct AstNode* value; } ret;
+        struct { struct AstNode* body; } profile;
         struct { struct AstNode** statements; int count; } block;
         struct { int op; struct AstNode *left, *right; } binary;
         struct { int is_float; union { long int_val; double float_val; }; } number;

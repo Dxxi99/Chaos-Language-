@@ -8,7 +8,7 @@ Token current_token;
 char* source;
 int pos, line = 1, col = 1;
 static struct { char* keyword; TokenType type; } keywords[] = {
-    {"num",TOK_NUM},{"text",TOK_TEXT},{"flag",TOK_FLAG},{"list",TOK_LIST},{"val",TOK_VAL},{"var",TOK_VAR},
+    {"num",TOK_NUM},{"text",TOK_TEXT},{"flag",TOK_FLAG},{"list",TOK_LIST},{"val",TOK_VAL},{"var",TOK_VAR},{"profile",TOK_PROFILE},
     {"if",TOK_IF},{"else",TOK_ELSE},{"elif",TOK_ELSE_IF},{"for",TOK_FOR},{"in",TOK_IN},
     {"while",TOK_WHILE},{"func",TOK_FUNC},{"struct",TOK_STRUCT},
     {"return",TOK_RETURN},{"print",TOK_PRINT},{"end",TOK_END},
