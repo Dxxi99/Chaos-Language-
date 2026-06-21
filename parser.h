@@ -2,6 +2,17 @@
 #define CHAOS_PARSER_H
 
 typedef enum {
+    TYPE_UNKNOWN,
+    TYPE_VOID,
+    TYPE_I64,
+    TYPE_F64,
+    TYPE_TEXT,
+    TYPE_FLAG,
+    TYPE_LIST,
+    TYPE_STRUCT
+} ChaosType;
+
+typedef enum {
     AST_PROGRAM, AST_VAR_DECL, AST_VAR_ASSIGN, AST_PRINT,
     AST_IF, AST_FOR, AST_WHILE, AST_FUNC_DEF, AST_STRUCT_DEF,
     AST_STRUCT_CREATE, AST_FIELD_ACCESS, AST_FUNC_CALL,
@@ -11,6 +22,7 @@ typedef enum {
 
 typedef struct AstNode {
     AstNodeType type;
+    ChaosType chaos_type;
     union {
         struct { char* name; struct AstNode* value; int is_mutable; } var_decl;
         struct { char* name; struct AstNode* value; } var_assign;

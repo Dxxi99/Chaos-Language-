@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "type.h"
 #include "lexer.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,6 +32,13 @@ static void skip_nl() { while (current_token.type == TOK_NEWLINE) lexer_next(); 
 static AstNode* parse_expr();
 static AstNode* parse_block();
 
+static AstNode* new_node(AstNodeType type) {
+    AstNode* n = calloc(1, sizeof(AstNode));
+    n->type = type;
+    n->chaos_type = TYPE_UNKNOWN;
+    return n;
+}
+
 static AstNode* parse_primary() {
     AstNode* n = calloc(1, sizeof(AstNode));
     switch (current_token.type) {
@@ -38,7 +46,7 @@ static AstNode* parse_primary() {
         case TOK_NOT: lexer_next(); n->type = AST_BINARY; n->binary.op = TOK_NOT; n->binary.left = parse_primary(); n->binary.right = NULL; return n;
         case TOK_NUM_INT: n->type = AST_NUMBER; n->number.is_float = 0; n->number.int_val = current_token.int_val; lexer_next(); return n;
         case TOK_NUM_FLOAT: n->type = AST_NUMBER; n->number.is_float = 1; n->number.float_val = current_token.float_val; lexer_next(); return n;
-        case TOK_STRING: n->type = AST_STRING; n->string.value = strdup(current_token.str_val); lexer_next(); return n;
+        case TOK_STRING: n->type = AST_STRING; n->chaos_type = TYPE_TEXT; n->string.value = strdup(current_token.str_val); lexer_next(); return n;
         case TOK_TRUE: n->type = AST_BOOL; n->boolean.value = 1; lexer_next(); return n;
         case TOK_FALSE: n->type = AST_BOOL; n->boolean.value = 0; lexer_next(); return n;
         case TOK_LBRACKET: { lexer_next(); n->type = AST_LIST; n->list.elements = NULL; n->list.count = 0; if (current_token.type != TOK_RBRACKET) { n->list.elements = malloc(sizeof(AstNode*)); n->list.elements[0] = parse_expr(); n->list.count = 1; while (current_token.type == TOK_COMMA) { lexer_next(); n->list.count++; n->list.elements = realloc(n->list.elements, sizeof(AstNode*)*n->list.count); n->list.elements[n->list.count-1] = parse_expr(); } } expect(TOK_RBRACKET); return n; }

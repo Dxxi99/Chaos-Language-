@@ -1,9 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "lexer.h"
 #include "parser.h"
-#include "codegen.h"
+#include "lexer.h"
+#include "symbol_table.h"
+#include "codegen/codegen.h"
+
+void install_package(const char* name) {
+    fprintf(stderr, "install: %s (not yet implemented)\n", name);
+}
 
 void print_help() {
     printf("Chaos Programming Language\n\n");
@@ -22,12 +27,13 @@ void run_file(const char* path) {
     
     lexer_init(src);
     AstNode* ast = parse_program();
-    codegen_init("chaos_output");
-    codegen_program(ast);
-    codegen_finish();
+    CodegenContext ctx;
+    codegen_init(&ctx, "chaos_output");
+    printf("AST root type=%d, block.count=%d\n", ast->type, ast->block.count);
+    if (ast->block.count > 0) printf("first stmt type=%d\n", ast->block.statements[0]->type);
+    codegen_program(&ctx, ast);
+    codegen_finish(&ctx);
     free(src);
-    
-    // Compile to native
     system("/opt/homebrew/Cellar/llvm@18/18.1.8/bin/llc chaos_output.ll -o chaos_output.s 2>/dev/null");
     system("clang chaos_output.s -o chaos_output 2>/dev/null");
     system("./chaos_output");
@@ -41,11 +47,13 @@ void build_file(const char* path, const char* output) {
     
     lexer_init(src);
     AstNode* ast = parse_program();
-    codegen_init(output);
-    codegen_program(ast);
-    codegen_finish();
+    CodegenContext ctx;
+    codegen_init(&ctx, output);
+    printf("AST root type=%d, block.count=%d\n", ast->type, ast->block.count);
+    if (ast->block.count > 0) printf("first stmt type=%d\n", ast->block.statements[0]->type);
+    codegen_program(&ctx, ast);
+    codegen_finish(&ctx);
     free(src);
-    
     char cmd[512];
     snprintf(cmd, 512, "/opt/homebrew/Cellar/llvm@18/18.1.8/bin/llc %s.ll -o %s.s 2>/dev/null", output, output);
     system(cmd);
@@ -54,33 +62,22 @@ void build_file(const char* path, const char* output) {
     printf("Built: %s\n", output);
 }
 
-void install_package(const char* name) {
-    printf("Installing package: %s\n", name);
-    printf("(Package manager coming soon)\n");
-}
-
 int main(int argc, char** argv) {
     if (argc < 2) {
         print_help();
         return 1;
     }
-    
-    if (strcmp(argv[1], "help") == 0) {
-        print_help();
-    } else if (strcmp(argv[1], "run") == 0 && argc >= 3) {
+    if (strcmp(argv[1], "run") == 0 && argc >= 3) {
         run_file(argv[2]);
     } else if (strcmp(argv[1], "build") == 0 && argc >= 3) {
-        char output[256];
-        snprintf(output, 256, "%s", argv[2]);
-        char* dot = strrchr(output, '.');
-        if (dot) *dot = '\0';
-        build_file(argv[2], output);
+        build_file(argv[2], "chaos_output");
     } else if (strcmp(argv[1], "install") == 0 && argc >= 3) {
         install_package(argv[2]);
+    } else if (strcmp(argv[1], "help") == 0) {
+        print_help();
     } else {
-        // Default: compile given file
-        run_file(argv[1]);
+        fprintf(stderr, "Unknown command: %s\n", argv[1]);
+        return 1;
     }
-    
     return 0;
 }
