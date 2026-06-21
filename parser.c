@@ -60,13 +60,17 @@ static AstNode* parse_stmt() {
     AstNode* n;
     switch (current_token.type) {
         case TOK_NUM: case TOK_TEXT: case TOK_FLAG: case TOK_LIST: case TOK_VAL: case TOK_VAR:;
-            int is_mut = (current_token.type != TOK_VAL);
+            
+int is_mut = 1; 
+is_mut = (current_token.type == TOK_VAL) ? 0 : 1;
             lexer_next(); n = calloc(1, sizeof(AstNode)); n->type = AST_VAR_DECL; n->var_decl.name = strdup(current_token.lexeme); n->var_decl.is_mutable = is_mut; expect(TOK_IDENT);
             if (current_token.type == TOK_EQ) { lexer_next(); n->var_decl.value = parse_expr(); } return n;
 
             if (current_token.type == TOK_EQ) { lexer_next(); n->var_decl.value = parse_expr(); } return n;
         case TOK_IDENT: { char* name = strdup(current_token.lexeme);
             if (strcmp(name, "import") == 0) { lexer_next(); if (current_token.type == TOK_STRING) { char* path = strdup(current_token.str_val); lexer_next(); AstNode* imported = import_file(path); free(path); free(name); return imported; } }
+int is_mut = 1; 
+is_mut = (current_token.type == TOK_VAL) ? 0 : 1;
             if (is_struct_type(name)) { lexer_next(); n = calloc(1, sizeof(AstNode)); n->type = AST_VAR_DECL; n->var_decl.name = strdup(current_token.lexeme); n->var_decl.is_mutable = is_mut; expect(TOK_IDENT); if (current_token.type == TOK_LPAREN) { lexer_next(); AstNode** args = NULL; int argc = 0; if (current_token.type != TOK_RPAREN) { args = malloc(sizeof(AstNode*)); args[0] = parse_expr(); argc = 1; while (current_token.type == TOK_COMMA) { lexer_next(); argc++; args = realloc(args, sizeof(AstNode*)*argc); args[argc-1] = parse_expr(); } } if (current_token.type == TOK_RPAREN) lexer_next(); n = calloc(1, sizeof(AstNode)); n->type = AST_FUNC_CALL; n->func_call.name = name; n->func_call.args = args; n->func_call.arg_count = argc; return n; }
             if (current_token.type == TOK_EQ) { lexer_next(); n->var_decl.value = parse_expr(); } free(name); return n; }
             lexer_next(); if (strcmp(name, "main") == 0 && current_token.type != TOK_EQ && current_token.type != TOK_LPAREN && current_token.type != TOK_DOT) { skip_nl(); n = parse_block(); expect(TOK_END); expect(TOK_IDENT); return n; }
