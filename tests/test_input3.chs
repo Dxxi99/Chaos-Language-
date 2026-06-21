@@ -1,0 +1,6 @@
+print("숫자 입력:")
+num x = input()
+print(x * 2)
+print("문자 입력:")
+text s = input()
+print(s)
