@@ -17,3 +17,9 @@ $(TARGET): $(OBJ)
 
 clean:
 	rm -f $(OBJ) $(TARGET) *.ll
+
+install: all
+	sudo cp chaos /usr/local/bin/
+	sudo mkdir -p /usr/local/share/chaos
+	sudo cp math.chs /usr/local/share/chaos/
+	sudo cp -r lib /usr/local/share/chaos/
