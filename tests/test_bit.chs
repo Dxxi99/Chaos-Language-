@@ -1,5 +1,0 @@
-print(6 & 3)
-print(6 | 3)
-print(6 ^ 3)
-print(8 >> 2)
-print(1 << 4)

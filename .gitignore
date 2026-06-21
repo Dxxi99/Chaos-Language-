@@ -1,0 +1,7 @@
+*.o
+*.s
+*.ll
+*.dSYM
+chaos_output
+chaos_output.*
+*.txt

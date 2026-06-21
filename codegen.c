@@ -54,7 +54,7 @@ void codegen_init(const char* fn) {
     LLVMTypeRef a4[]={LLVMDoubleType(),LLVMDoubleType()}; LLVMAddFunction(mod,"llvm.pow.f64",LLVMFunctionType(LLVMDoubleType(),a4,2,0));LLVMTypeRef a7[]={LLVMDoubleType()};LLVMAddFunction(mod,"llvm.sqrt.f64",LLVMFunctionType(LLVMDoubleType(),a7,1,0));LLVMAddFunction(mod,"llvm.sin.f64",LLVMFunctionType(LLVMDoubleType(),a7,1,0));LLVMAddFunction(mod,"llvm.cos.f64",LLVMFunctionType(LLVMDoubleType(),a7,1,0));LLVMAddFunction(mod,"llvm.log.f64",LLVMFunctionType(LLVMDoubleType(),a7,1,0));
     fopen_ty=LLVMFunctionType(I8P,a3,2,0); LLVMAddFunction(mod,"fopen",fopen_ty);
     LLVMTypeRef a5[]={I8P,I64,I64,I8P}; fread_ty=LLVMFunctionType(I64,a5,4,0); LLVMAddFunction(mod,"fread",fread_ty);LLVMAddFunction(mod,"fwrite",fread_ty);
-    LLVMTypeRef a6[]={I8P}; fclose_ty=LLVMFunctionType(LLVMInt32Type(),a6,1,0); LLVMAddFunction(mod,"fclose",fclose_ty);
+    LLVMTypeRef a6[]={I8P}; fclose_ty=LLVMFunctionType(LLVMInt32Type(),a6,1,0); LLVMAddFunction(mod,"fclose",fclose_ty);LLVMTypeRef da[]={I8P};LLVMAddFunction(mod,"opendir",LLVMFunctionType(I8P,da,1,0));LLVMAddFunction(mod,"readdir",LLVMFunctionType(I8P,(LLVMTypeRef[]){I8P},1,0));LLVMAddFunction(mod,"closedir",LLVMFunctionType(LLVMInt32Type(),da,1,0));LLVMAddFunction(mod,"remove",LLVMFunctionType(LLVMInt32Type(),da,1,0));
 }
 
 static void clr() { vc=0; }
@@ -150,7 +150,7 @@ static void define_fn(AstNode* n) {Func* fi=get_fn(n->func_def.name);if(!fi)retu
 static void decl_var(AstNode* n) {
     int s=0,f=0,l=0,st=0,flt=0;LLVMTypeRef ty=I64;LLVMValueRef init=0;Struct* si=0;
     if(n->var_decl.value&&n->var_decl.value->type==AST_STRUCT_CREATE){si=get_st(n->var_decl.value->struct_create.struct_name);if(si){ty=st_ty(n->var_decl.value->struct_create.struct_name);st=1;}}
-if(n->var_decl.value&&n->var_decl.value->type==AST_FUNC_CALL){const char* nm=n->var_decl.value->func_call.name;if(strcmp(nm,"concat")==0||strcmp(nm,"readFile")==0||strcmp(nm,"input")==0){s=1;ty=I8P;}else if(strcmp(nm,"sqrt")==0){ty=LLVMDoubleType();flt=1;}else if(strncmp(nm,"make",4)==0){Struct* fsi=get_st(nm+4);if(fsi){ty=st_ty(nm+4);st=1;si=fsi;}}}
+if(n->var_decl.value&&n->var_decl.value->type==AST_FUNC_CALL){const char* nm=n->var_decl.value->func_call.name;if(strcmp(nm,"concat")==0||strcmp(nm,"readFile")==0||strcmp(nm,"input")==0){s=1;ty=I8P;}else if(strcmp(nm,"deleteFile")==0){LLVMValueRef p=expr(n->func_call.args[0]);LLVMValueRef rm=LLVMGetNamedFunction(mod,"remove");LLVMBuildCall2(b,LLVMFunctionType(LLVMInt32Type(),(LLVMTypeRef[]){I8P},1,0),rm,(LLVMValueRef[]){p},1,"");if(strcmp(nm,"sqrt")==0){ty=LLVMDoubleType();flt=1;}else if(strncmp(nm,"make",4)==0){Struct* fsi=get_st(nm+4);if(fsi){ty=st_ty(nm+4);st=1;si=fsi;}}}
     if(st&&si){init=expr(n->var_decl.value);LLVMValueRef a=LLVMBuildAlloca(b,ty,n->var_decl.name);LLVMBuildStore(b,init,a);set_v(n->var_decl.name,a,0,0,ty,0,0);return;}
     if(n->var_decl.value&&n->var_decl.value->type==AST_LIST){ty=list_ty();l=1;init=expr(n->var_decl.value);}
     else if(n->var_decl.value&&n->var_decl.value->type==AST_STRING){ty=I8P;s=1;init=expr(n->var_decl.value);}

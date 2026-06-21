@@ -1,5 +1,0 @@
-num x = 10
-x++
-print(x)
-x--
-print(x)

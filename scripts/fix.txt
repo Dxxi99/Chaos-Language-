@@ -1,2 +1,0 @@
-    current_token = saved_tok;
-    lexer_next(); // skip the string token we just consumed
