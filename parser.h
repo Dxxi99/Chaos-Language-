@@ -12,7 +12,7 @@ typedef enum {
 typedef struct AstNode {
     AstNodeType type;
     union {
-        struct { char* name; struct AstNode* value; } var_decl;
+        struct { char* name; struct AstNode* value; int is_mutable; } var_decl;
         struct { char* name; struct AstNode* value; } var_assign;
         struct { struct AstNode** args; int arg_count; } print;
         struct { struct AstNode *cond, *then_body, *else_body; } if_stmt;
