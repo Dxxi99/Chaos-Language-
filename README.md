@@ -18,108 +18,123 @@
 ---
 
 ## 🛠 Quick Start (macOS)
+Install LLVM
 
-# Install LLVM
 brew install llvm@18
 
-# Clone and build
+Clone and build
+
 git clone https://github.com/Dxxi99/Chaos-Language-.git
 cd Chaos-Language-
 make
 
-# Run your first Chaos program
+Run your first Chaos program
+
 ./chaos run examples/hello.chs
+
+text
 
 ---
 
 ## 📝 Syntax Overview
 
 ### Variables
+num a = 42 # Integer
+num b = 3.14 # Float
+text s = "hello" # String
+flag f = true # Boolean
+list arr = [1, 2, 3] # List
 
-num a = 42          # Integer
-num b = 3.14        # Float
-text s = "hello"    # String
-flag f = true       # Boolean
-list arr = [1, 2, 3]  # List
+text
 
-### Operations
+### Operators
+Arithmetic: + - * / % **
+Comparison: > < >= <= == !=
+Logical: and or not
+Compound: += -= *= /= %= **=
+Increment: ++ --
 
-Arithmetic:  +  -  * /  %  **
-Comparison:  >  <  >=  <=  ==  !=
-Logical:     and  or  not
-Compound:    +=  -=  *=  /=  %=  **=
-Increment:   ++  --
+text
 
 ### Control Flow
-
 if x > 10
-    print("big")
+print("big")
 elif x > 5
-    print("mid")
+print("mid")
 else
-    print("small")
-end
+print("small")
+end if
 
 while x > 0
-    x = x - 1
-end
+x = x - 1
+end while
 
 for i = 0 to 10
-    print(i)
-end
+print(i)
+end for
 
 for item in arr
-    print(item)
-end
+print(item)
+end for
+
+text
 
 ### Functions & Structs
-
 func add(a, b)
-    return a + b
-end
+return a + b
+end func
 
 struct Point
-    num x
-    num y
-end
+num x
+num y
+end struct
+
+text
 
 ---
 
 ## 🏗 Architecture
+chaos.chs → [Lexer] → [Parser] → [Codegen] → LLVM IR → Native Binary
+↓ ↓ ↓
+lexer.c parser.c codegen.c
+↓
+symbol_table.c
 
-
+text
 
 | Component | Description |
 | :--- | :--- |
 | Lexer | Multi-file import support, tokenization |
-| Parser | AST generation with synchronize() error recovery |
+| Parser | AST generation with `synchronize()` error recovery |
 | Codegen | LLVM IR generation via recursive AST traversal |
 | Symbol Table | Scope-aware variable, function, and struct management |
 
 ---
 
 ## 📂 Project Structure
-
 Chaos-Language-/
-├── main.c              # Entry point, compile pipeline
-├── lexer.c/h           # Lexical analysis
-├── parser.c/h          # Syntax analysis, AST nodes
-├── codegen.c/h         # LLVM IR code generation
-├── symbol_table.c/h    # Symbol management
-├── Makefile            # Build configuration
-└── examples/           # Example Chaos programs
-    ├── hello.chs
-    └── math.chs
+├── main.c # Entry point, compile pipeline
+├── lexer.c/h # Lexical analysis
+├── parser.c/h # Syntax analysis, AST nodes
+├── codegen.c/h # LLVM IR code generation
+├── symbol_table.c/h # Symbol management
+├── Makefile # Build configuration
+├── examples/ # Example Chaos programs
+│ ├── hello.chs
+│ └── math.chs
+└── README.md
+
+text
 
 ---
 
 ## 🔧 Current Version: v5.3
 
-- [x] if / elif / else recursive chains
-- [x] while loops with break / continue
-- [x] for loops (range and list iteration)
+- [x] `if` / `elif` / `else` recursive chains
+- [x] `while` loops with `break` / `continue`
+- [x] `for` loops (range and list iteration)
 - [x] Nested loop stack management
-- [x] Type system: num, text, flag, list
+- [x] Type system: `num`, `text`, `flag`, `list`
 - [x] Runtime library: math, string, I/O
 
 ---
