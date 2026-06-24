@@ -33,7 +33,7 @@ make
 ./chaos run examples/hello.chs
 📝 Syntax Overview
 
-Variables
+## Variables
 
 text
 num a = 42          # Integer
@@ -41,7 +41,8 @@ num b = 3.14        # Float
 text s = "hello"    # String
 flag f = true       # Boolean
 list arr = [1, 2, 3]  # List
-Operators
+
+## Operators
 
 text
 Arithmetic:  +  -  *  /  %  **
@@ -49,7 +50,8 @@ Comparison:  >  <  >=  <=  ==  !=
 Logical:     and  or  not
 Compound:    +=  -=  *=  /=  %=  **=
 Increment:   ++  --
-Control Flow
+
+## Control Flow
 
 text
 if x > 10
@@ -71,18 +73,20 @@ end
 for item in arr
     print(item)
 end
-Functions & Structs
+
+## Functions & Structs
 
 text
 func add(a, b)
     return a + b
 end
 
-struct Point
+## struct Point
     num x
     num y
 end
-🏗 Architecture
+
+## 🏗 Architecture
 
 text
 chaos.chs → [Lexer] → [Parser] → [Codegen] → LLVM IR → Native Binary
@@ -90,15 +94,18 @@ chaos.chs → [Lexer] → [Parser] → [Codegen] → LLVM IR → Native Binary
            lexer.c     parser.c    codegen.c
                            ↓
                     symbol_table.c
-Component	Description
+
+## Component	Description
 Lexer	Multi-file import support, tokenization
 Parser	AST generation with synchronize() error recovery
 Codegen	LLVM IR generation via recursive AST traversal
 Symbol Table	Scope-aware variable, function, and struct management
-📂 Project Structure
+
+## 📂 Project Structure
 
 text
-Chaos-Language-/
+
+## Chaos-Language-/
 ├── main.c              # Entry point, compile pipeline
 ├── lexer.c/h           # Lexical analysis
 ├── parser.c/h          # Syntax analysis, AST nodes
@@ -109,7 +116,8 @@ Chaos-Language-/
 │   ├── hello.chs
 │   └── math.chs
 └── README.md
-🔧 Current Version: v5.3
+
+## 🔧 Current Version: v5.3
 
 ✅ if / elif / else recursive chains
 ✅ while loops with break / continue
@@ -117,7 +125,8 @@ Chaos-Language-/
 ✅ Nested loop stack management
 ✅ Type system: num, text, flag, list
 ✅ Runtime library: math, string, I/O
-📜 License
+
+##📜 License
 
 MIT — feel free to use, modify, and distribute.
 
