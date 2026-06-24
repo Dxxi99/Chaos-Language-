@@ -1,34 +1,20 @@
-# Chaos Programming Language
-
-**Write like Python, run like C.** A meaning-centered, LLVM-based compiled language designed for maximum performance with clean, readable syntax.
-
-
----
-
-
-## 🚀 Features
-
-| Feature | Description |
-| :--- | :--- |
-| 🐍 Python-like Syntax | No semicolons, no curly braces — just clean code |
-| ⚡ C-like Speed | Compiles directly to native code via LLVM 18 |
-| 🔢 Unified `num` Type | Integers and floats handled automatically |
-| 📐 `end`-based Blocks | Clear control flow without indentation conflicts |
-| 🔄 2-Pass Compiler | Forward function references supported |
-| 🧰 Batteries Included | File I/O, math, string, and list built-ins |
-
-
----
-
-
-## 🛠 Quick Start (macOS)
-
-```bash
+Chaos Programming Language
+Write like Python, run like C. A meaning-centered, LLVM-based compiled language designed for maximum performance with clean, readable syntax.
+🚀 Features
+Feature	Description
+🐍 Python-like Syntax	No semicolons, no curly braces — just clean code
+⚡ C-like Speed	Compiles directly to native code via LLVM 18
+🔢 Unified num Type	Integers and floats handled automatically
+📐 end-based Blocks	Clear control flow without indentation conflicts
+🔄 2-Pass Compiler	Forward function references supported
+🧰 Batteries Included	File I/O, math, string, and list built-ins
+🛠 Quick Start (macOS)
+Bash
 # Install LLVM
 brew install llvm@18
 
 # Clone and build
-git clone [https://github.com/Dxxi99/Chaos-Language-.git](https://github.com/Dxxi99/Chaos-Language-.git)
+git clone https://github.com/Dxxi99/Chaos-Language-.git
 cd Chaos-Language-
 make
 
