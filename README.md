@@ -1,29 +1,45 @@
-Chaos Programming Language
-Write like Python, run like C. A meaning-centered, LLVM-based compiled language designed for maximum performance and readability.
-Features
-Python-like Syntax: Clean, expressive, and readable. No semicolons, no curly braces.
-C-like Speed: Compiles directly to optimized native machine code via LLVM 18.
-Unified num Type: Seamlessly handles integers and floats; the compiler handles the heavy lifting.
-end-based Blocks: Explicit block termination for clear, structured control flow.
-Advanced Pipeline: 2-pass compiler allows forward function references and optimized symbol resolution.
-Batteries Included: Built-in support for File I/O, math, string manipulation, and dynamic lists.
-Quick Start (macOS)
-Bash
+# Chaos Programming Language
+
+**Write like Python, run like C.** A meaning-centered, LLVM-based compiled language designed for maximum performance.
+
+---
+
+## Features
+
+- **Python-like syntax:** No semicolons, no curly braces.
+- **C-like speed:** Compiles directly to native code via LLVM.
+- **Unified `num` type:** Integers and floats handled automatically.
+- **`end`-based blocks:** Clear, readable control flow without indentation wars.
+- **2-pass compiler:** Allows forward function references.
+- **Batteries included:** Built-in support for File I/O, math, string, and lists.
+
+---
+
+## Quick Start (macOS)
+
+```bash
 brew install llvm@18
-git clone https://github.com/Dxxi99/Chaos-Language-.git
+git clone [https://github.com/Dxxi99/Chaos-Language-.git](https://github.com/Dxxi99/Chaos-Language-.git)
 cd Chaos-Language-
 make
 ./chaos run examples/hello.chs
+
 Syntax Overview
 Variables
-Plaintext
 num a = 42
 num b = 3.14
 text s = "hello"
 flag f = true
 list arr = [1, 2, 3]
+
+Operations
++ - * / % **
+> < >= <= == !=
+and or not
++= -= *= /= %= **=
+++ --
+
 Control Flow
-Plaintext
 if x > 10
     print("big")
 elif x > 5
@@ -39,8 +55,8 @@ end
 for n in arr
     print(n)
 end
+
 Functions & Structs
-Plaintext
 func add(a, b)
     return a + b
 end
@@ -49,10 +65,9 @@ struct Point
     num x
     num y
 end
+
 Architecture
-Chaos is built on a modular pipeline designed for extensibility:
-Lexer: Tokenization with multi-file import support.
-Parser: AST generation with robust synchronize() error recovery.
-Codegen: LLVM IR generation via codegen.c, utilizing GEP for complex structures.
-Symbol Table: Scope-aware management for variables, functions, and structs.
-Developed as a high-performance system programming tool.
+Lexer: Multi-file import support.
+Parser: AST generation with synchronize() error recovery.
+Codegen: LLVM IR generation via codegen.c.
+Symbol Table: Scope-aware variable and function management.
