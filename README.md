@@ -3,6 +3,9 @@
 **Write like Python, run like C.** A meaning-centered, LLVM-based compiled language designed for maximum performance with clean, readable syntax.
 
 
+---
+
+
 ## 🚀 Features
 
 | Feature | Description |
@@ -13,6 +16,9 @@
 | 📐 `end`-based Blocks | Clear control flow without indentation conflicts |
 | 🔄 2-Pass Compiler | Forward function references supported |
 | 🧰 Batteries Included | File I/O, math, string, and list built-ins |
+
+
+---
 
 
 ## 🛠 Quick Start (macOS)
@@ -28,44 +34,23 @@ make
 
 # Run your first Chaos program
 ./chaos run examples/hello.chs
-
-# Chaos Programming Language
-
-**Write like Python, run like C.** A meaning-centered, LLVM-based compiled language designed for maximum performance with clean, readable syntax.
-
-
-## 🚀 Features
-
-| Feature | Description |
-| :--- | :--- |
-| 🐍 Python-like Syntax | No semicolons, no curly braces — just clean code |
-| ⚡ C-like Speed | Compiles directly to native code via LLVM 18 |
-| 🔢 Unified `num` Type | Integers and floats handled automatically |
-| 📐 `end`-based Blocks | Clear control flow without indentation conflicts |
-| 🔄 2-Pass Compiler | Forward function references supported |
-| 🧰 Batteries Included | File I/O, math, string, and list built-ins |
-
-
-## 🛠 Quick Start (macOS)
-
-```bash
-# Install LLVM
-brew install llvm@18
-
-# Clone and build
-git clone [https://github.com/Dxxi99/Chaos-Language-.git](https://github.com/Dxxi99/Chaos-Language-.git)
-cd Chaos-Language-
-make
-
-# Run your first Chaos program
-./chaos run examples/hello.chs
-
+📝 Syntax Overview
+Variables
+Plaintext
+num a = 42          # Integer
+num b = 3.14        # Float
+text s = "hello"    # String
+flag f = true       # Boolean
+list arr = [1, 2, 3]  # List
+Operations
+Plaintext
 Arithmetic:  +  -  * /  %  **
 Comparison:  >  <  >=  <=  ==  !=
 Logical:     and  or  not
 Compound:    +=  -=  *=  /=  %=  **=
 Increment:   ++  --
-
+Control Flow
+Plaintext
 if x > 10
     print("big")
 elif x > 5
@@ -85,7 +70,8 @@ end
 for item in arr
     print(item)
 end
-
+Functions & Structs
+Plaintext
 func add(a, b)
     return a + b
 end
@@ -94,14 +80,14 @@ struct Point
     num x
     num y
 end
-
 🏗 Architecture
 Component	Description
 Lexer	Multi-file import support, tokenization
 Parser	AST generation with synchronize() error recovery
 Codegen	LLVM IR generation via recursive AST traversal
 Symbol Table	Scope-aware variable, function, and struct management
-
+📂 Project Structure
+Plaintext
 Chaos-Language-/
 ├── main.c              # Entry point, compile pipeline
 ├── lexer.c/h           # Lexical analysis
@@ -110,7 +96,6 @@ Chaos-Language-/
 ├── symbol_table.c/h    # Symbol management
 ├── Makefile            # Build configuration
 └── examples/           # Example Chaos programs
-
 🔧 Current Version: v5.3
 [x] if / elif / else recursive chains
 [x] while loops with break / continue
