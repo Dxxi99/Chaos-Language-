@@ -1,26 +1,36 @@
-Chaos Programming Language
-Chaos is a high-performance, statically-typed, compiled programming language built on LLVM. Designed for developers who require the raw speed of C with the clean, structured ergonomics of a modern language, Chaos offers a seamless bridge between low-level system control and high-level productivity.
-Key Technical Features
-LLVM-Powered Native Code Generation: Compiles directly to machine code via LLVM 18, ensuring execution performance comparable to C.
-Unified num Type System: Simplifies numeric operations by integrating integer and floating-point logic, with the compiler handling type-specific LLVM instructions (ICmp/FCmp) automatically.
-Robust CFG-Based Control Flow: Features stack-managed nested loops (break/continue) and blocks, ensuring stable and predictable execution paths in complex logic.
-Extensible Interoperability: A built-in call_builtin system allows for native-speed access to C standard libraries (File I/O, Networking, etc.) without overhead.
-Advanced Data Structure Support: Native support for struct and dynamic list types with efficient manual memory layout management.
-Architecture Overview
-The Chaos compiler is built with a clean, modular design:
-Lexer: Tokenizes source code into a stream of meaningful symbols.
-Parser: Constructs a robust Abstract Syntax Tree (AST) with error recovery capabilities (synchronize).
-Codegen: Translates the AST into LLVM IR, handling symbol mapping and memory layout calculations.
-Symbol Table: Manages variable scopes, function definitions, and type tracking for the entire lifecycle.
+Chaos Language
+Chaos is a high-performance, statically-typed, compiled programming language built on LLVM. Designed to bridge the gap between C-level performance and Python-like developer productivity, Chaos offers a robust framework for systems programming, data manipulation, and algorithmic tasks.
+Key Technical Specifications
+Native Execution: Compiles to optimized machine code via LLVM 18, delivering performance parity with C/C++.
+Unified num System: A unified numeric type that handles both integers and floating-point logic, with the compiler automatically selecting optimal LLVM IR instructions (ICmp/FCmp).
+Stack-Managed Control Flow: Advanced support for nested loops and conditional blocks using a dedicated stack-based management system, ensuring predictable break/continue semantics.
+Zero-Overhead Interoperability: A native call_builtin interface enables seamless integration with C standard libraries (File I/O, Networking, Math) without performance penalties.
+Memory & Structure: Native support for struct and dynamic list types with efficient layout management using LLVM's GEP (GetElementPtr) operations.
+Architecture & Pipeline
+Chaos employs a structured, modular compiler pipeline:
+Lexical Analysis: Tokenizes source code, handling everything from numeric literals to keyword-based syntax.
+Parser: Builds a robust Abstract Syntax Tree (AST). Includes built-in error recovery mechanisms (synchronize) to handle malformed input gracefully.
+Code Generation: Translates the AST into LLVM IR, performing symbol table mapping and memory layout calculations for complex types.
+Native Compilation: Triggers the LLVM toolchain (llc and clang) to produce optimized, hardware-specific binaries.
 Getting Started
-Prerequisites
-LLVM 18
-GCC or Clang (for final linking)
-Build & Run
+Build from Source
 Bash
 git clone https://github.com/Dxxi99/Chaos-Language-.git
 cd Chaos-Language-
 make
-./chaos run examples/hello.chs
-Language Philosophy
-Chaos is built on the philosophy of "Write like Python, run like C." It avoids unnecessary verbosity (no curly braces, no semicolons) while maintaining strict static typing to ensure safety and performance.
+Basic Syntax Usage
+Plaintext
+# Example: Nested loop logic
+func main()
+    var count = 0
+    while count < 3
+        if count == 1
+            count = count + 1
+            continue
+        end
+        print(count)
+        count = count + 1
+    end
+end
+Project Philosophy
+Chaos is built for those who value clarity in structure and uncompromised speed in execution. By adopting an end-based block structure and a clean type system, it eliminates unnecessary syntax noise while remaining strictly typed to ensure runtime safety and high performance.
