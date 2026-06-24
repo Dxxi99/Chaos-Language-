@@ -136,9 +136,3 @@ text
 - [x] Nested loop stack management
 - [x] Type system: `num`, `text`, `flag`, `list`
 - [x] Runtime library: math, string, I/O
-
----
-
-## 📜 License
-
-MIT — feel free to use, modify, and distribute.
