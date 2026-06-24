@@ -1,3 +1,4 @@
+#pragma once
 #ifndef SYMBOL_TABLE_H
 #define SYMBOL_TABLE_H
 #include "parser.h"
@@ -35,3 +36,16 @@ void set_v(const char* n, LLVMValueRef p, int s, int f, LLVMTypeRef t, int l, in
 LLVMTypeRef st_ty(const char* n);
 LLVMTypeRef list_ty(void);
 #endif
+
+// Function signature for call resolution
+typedef struct {
+    char* name;
+    LLVMTypeRef fn_type;
+    LLVMTypeRef return_type;
+    int param_count;
+    LLVMTypeRef* param_types;
+    int resolved;
+} FuncSig;
+
+void register_func_sig(const char* name, LLVMTypeRef fn_type, int pc);
+LLVMTypeRef lookup_func_sig(const char* name);

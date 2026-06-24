@@ -1,4 +1,4 @@
-CC = gcc
+CC = clang
 CFLAGS = -Wall -g -I/opt/homebrew/Cellar/llvm@18/18.1.8/include -I.
 LDFLAGS = -L/opt/homebrew/Cellar/llvm@18/18.1.8/lib
 LLVM_LIBS = -lLLVM-18

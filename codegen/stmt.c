@@ -1,4 +1,7 @@
 #include "codegen.h"
+
+// printf_type removed
+static LLVMTypeRef puts_type = NULL;
 #include <stdio.h>
 #include <string.h>
 
@@ -8,99 +11,91 @@
 // ===========================
 // Safe LLVM function getters
 // ===========================
-static LLVMValueRef get_printf_fn(CodegenContext* ctx) {
-    LLVMValueRef fn = LLVMGetNamedFunction(ctx->mod, "printf");
-    if (fn) return fn;
-    LLVMTypeRef i8ptr = LLVMPointerType(LLVMInt8Type(), 0);
-    LLVMTypeRef fn_ty = LLVMFunctionType(LLVMInt32Type(), &i8ptr, 1, 1);
-    return LLVMAddFunction(ctx->mod, "printf", fn_ty);
-}
-
+// get_printf_fn removed - using print_i64
 static LLVMValueRef get_puts_fn(CodegenContext* ctx) {
     LLVMValueRef fn = LLVMGetNamedFunction(ctx->mod, "puts");
     if (fn) return fn;
     LLVMTypeRef i8ptr = LLVMPointerType(LLVMInt8Type(), 0);
     LLVMTypeRef fn_ty = LLVMFunctionType(LLVMInt32Type(), &i8ptr, 1, 0);
+    puts_type = fn_ty;
     return LLVMAddFunction(ctx->mod, "puts", fn_ty);
 }
 
 static void stmt_if(CodegenContext* ctx, AstNode* n) {
     ExprResult er = expr(ctx, n->if_stmt.cond);
     LLVMValueRef cond = er.val;
-    cond = LLVMBuildICmp(ctx->b, LLVMIntNE, cond,
-                         LLVMConstInt(LLVMInt64Type(), 0, 0), "");
+    cond = cb_truth_test(ctx, cond);
     
-    LLVMBasicBlockRef then_bb = LLVMAppendBasicBlock(ctx->cur_fn, "then");
+    LLVMBasicBlockRef then_bb = cb_append_block(ctx, "then");
     LLVMBasicBlockRef else_bb = n->if_stmt.else_body ? 
-        LLVMAppendBasicBlock(ctx->cur_fn, "else") : NULL;
-    LLVMBasicBlockRef merge_bb = LLVMAppendBasicBlock(ctx->cur_fn, "merge");
+        cb_append_block(ctx, "else") : NULL;
+    LLVMBasicBlockRef merge_bb = cb_append_block(ctx, "merge");
     
     if (else_bb)
-        LLVMBuildCondBr(ctx->b, cond, then_bb, else_bb);
+        cb_build_cond_br(ctx, cond, then_bb, else_bb);
     else
-        LLVMBuildCondBr(ctx->b, cond, then_bb, merge_bb);
+        cb_build_cond_br(ctx, cond, then_bb, merge_bb);
     
-    LLVMPositionBuilderAtEnd(ctx->b, then_bb);
+    cb_position_at_end(ctx, then_bb);
     stmt(ctx, n->if_stmt.then_body);
-    if (!LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(ctx->b)))
-        LLVMBuildBr(ctx->b, merge_bb);
+    if (!cb_block_has_terminator(ctx))
+        cb_build_br(ctx, merge_bb);
     
     if (else_bb) {
-        LLVMPositionBuilderAtEnd(ctx->b, else_bb);
+        cb_position_at_end(ctx, else_bb);
         stmt(ctx, n->if_stmt.else_body);
-        if (!LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(ctx->b)))
-            LLVMBuildBr(ctx->b, merge_bb);
+        if (!cb_block_has_terminator(ctx))
+            cb_build_br(ctx, merge_bb);
     }
     
-    LLVMPositionBuilderAtEnd(ctx->b, merge_bb);
+    cb_position_at_end(ctx, merge_bb);
 }
 
 // ===========================
 // WHILE statement
 // ===========================
 static void stmt_while(CodegenContext* ctx, AstNode* n) {
-    LLVMBasicBlockRef cond_bb = LLVMAppendBasicBlock(ctx->cur_fn, "while_cond");
-    LLVMBasicBlockRef body_bb = LLVMAppendBasicBlock(ctx->cur_fn, "while_body");
-    LLVMBasicBlockRef end_bb  = LLVMAppendBasicBlock(ctx->cur_fn, "while_end");
+    LLVMBasicBlockRef cond_bb = cb_append_block(ctx, "while_cond");
+    LLVMBasicBlockRef body_bb = cb_append_block(ctx, "while_body");
+    LLVMBasicBlockRef end_bb  = cb_append_block(ctx, "while_end");
     
-    LLVMBuildBr(ctx->b, cond_bb);
+    cb_build_br(ctx, cond_bb);
     
-    LLVMPositionBuilderAtEnd(ctx->b, cond_bb);
+    cb_position_at_end(ctx, cond_bb);
     ExprResult er = expr(ctx, n->while_stmt.cond);
     LLVMValueRef cond = er.val;
-    cond = LLVMBuildICmp(ctx->b, LLVMIntNE, cond,
-                         LLVMConstInt(LLVMInt64Type(), 0, 0), "");
-    LLVMBuildCondBr(ctx->b, cond, body_bb, end_bb);
+    cond = cb_truth_test(ctx, cond);
+    cb_build_cond_br(ctx, cond, body_bb, end_bb);
     
-    LLVMPositionBuilderAtEnd(ctx->b, body_bb);
+    cb_position_at_end(ctx, body_bb);
     stmt(ctx, n->while_stmt.body);
-    LLVMBuildBr(ctx->b, cond_bb);
+    cb_build_br(ctx, cond_bb);
     
-    LLVMPositionBuilderAtEnd(ctx->b, end_bb);
+    cb_position_at_end(ctx, end_bb);
 }
 
 // ===========================
 // FOR statement
 // ===========================
 static void stmt_for(CodegenContext* ctx, AstNode* n) {
-    LLVMBasicBlockRef cond_bb = LLVMAppendBasicBlock(ctx->cur_fn, "for_cond");
-    LLVMBasicBlockRef body_bb = LLVMAppendBasicBlock(ctx->cur_fn, "for_body");
-    LLVMBasicBlockRef end_bb  = LLVMAppendBasicBlock(ctx->cur_fn, "for_end");
+    LLVMBasicBlockRef cond_bb = cb_append_block(ctx, "for_cond");
+    LLVMBasicBlockRef body_bb = cb_append_block(ctx, "for_body");
+    LLVMBasicBlockRef end_bb  = cb_append_block(ctx, "for_end");
     
-    LLVMBuildBr(ctx->b, cond_bb);
+    cb_build_br(ctx, cond_bb);
     
-    LLVMPositionBuilderAtEnd(ctx->b, cond_bb);
+    cb_position_at_end(ctx, cond_bb);
     ExprResult er = expr(ctx, n->for_stmt.end);
     LLVMValueRef cond = er.val;
     cond = LLVMBuildICmp(ctx->b, LLVMIntSLE, 
                          expr(ctx, n->for_stmt.start).val, cond, "");
-    LLVMBuildCondBr(ctx->b, cond, body_bb, end_bb);
+    cb_build_cond_br(ctx, cond, body_bb, end_bb);
     
-    LLVMPositionBuilderAtEnd(ctx->b, body_bb);
+    cb_position_at_end(ctx, body_bb);
     stmt(ctx, n->for_stmt.body);
-    LLVMBuildBr(ctx->b, cond_bb);
+    cb_build_br(ctx, cond_bb);
     
-    LLVMPositionBuilderAtEnd(ctx->b, end_bb);
+    cb_position_at_end(ctx, end_bb);
 }
 
 // ===========================
@@ -108,6 +103,8 @@ static void stmt_for(CodegenContext* ctx, AstNode* n) {
 // ===========================
 void stmt(CodegenContext* ctx, AstNode* n) {
     if (!n) return;
+    LLVMBasicBlockRef _bb = LLVMGetInsertBlock(ctx->b);
+    if (!_bb || LLVMGetBasicBlockTerminator(_bb)) return;
     
     switch (n->type) {
         case AST_IF:
@@ -124,40 +121,86 @@ void stmt(CodegenContext* ctx, AstNode* n) {
             
         case AST_BLOCK:
         case AST_PROGRAM:
-            for (int i = 0; i < n->block.count; i++)
-                stmt(ctx, n->block.statements[i]);
+            if (n->block.statements) {
+                for (int i = 0; i < n->block.count; i++) {
+                    LLVMBasicBlockRef _bb2 = LLVMGetInsertBlock(ctx->b);
+                    if (!_bb2 || LLVMGetBasicBlockTerminator(_bb2)) break;
+                    stmt(ctx, n->block.statements[i]);
+                }
+            }
             break;
             
         case AST_RETURN: {
             ExprResult er = expr(ctx, n->ret.value);
-            LLVMBuildRet(ctx->b, er.val);
+            cb_build_ret(ctx, er.val);
             break;
         }
             
         case AST_VAR_DECL: {
+            LLVMBasicBlockRef _bb = LLVMGetInsertBlock(ctx->b);
+            if (!_bb || LLVMGetBasicBlockTerminator(_bb)) break;
             ExprResult er = expr(ctx, n->var_decl.value);
-            (void)er;  // value is stored elsewhere
+            LLVMValueRef alloca = LLVMBuildAlloca(ctx->b, LLVMInt64Type(), n->var_decl.name);
+            LLVMBuildStore(ctx->b, er.val, alloca);
+            extern void set_v(const char*, LLVMValueRef, int, int, LLVMTypeRef, int, int, int, ChaosType);
+            set_v(n->var_decl.name, alloca, 0, 0, NULL, 0, 0, 1, er.chaos_type);
+            break;
+        }
+            
+        case AST_FUNC_DEF: {
+            LLVMValueRef fn = LLVMGetNamedFunction(ctx->mod, n->func_def.name);
+            if (!fn) break;
+            
+            LLVMValueRef prev_fn = ctx->cur_fn;
+            LLVMBasicBlockRef prev_bb = LLVMGetInsertBlock(ctx->b);
+            ctx->cur_fn = fn;
+            LLVMBasicBlockRef entry = LLVMAppendBasicBlock(fn, "entry");
+            LLVMPositionBuilderAtEnd(ctx->b, entry);
+            
+            // Allocate parameters
+            int pc = n->func_def.param_count;
+            for (int i = 0; i < pc; i++) {
+                LLVMValueRef param = LLVMGetParam(fn, i);
+                LLVMValueRef alloca = LLVMBuildAlloca(ctx->b, LLVMInt64Type(), n->func_def.params[i]);
+                LLVMBuildStore(ctx->b, param, alloca);
+                extern void set_v(const char*, LLVMValueRef, int, int, LLVMTypeRef, int, int, int, ChaosType);
+                set_v(n->func_def.params[i], alloca, 0, 0, NULL, 0, 0, 1, TYPE_I64);
+            }
+            
+            stmt(ctx, n->func_def.body);
+            
+            LLVMBasicBlockRef bb = LLVMGetInsertBlock(ctx->b);
+            if (bb && !LLVMGetBasicBlockTerminator(bb))
+                LLVMBuildRet(ctx->b, LLVMConstInt(LLVMInt64Type(), 0, 0));
+            
+            ctx->cur_fn = prev_fn;
+            if (prev_bb) LLVMPositionBuilderAtEnd(ctx->b, prev_bb);
             break;
         }
             
         case AST_PRINT:
             for (int i = 0; i < n->print.arg_count; i++) {
-                ExprResult r = expr(ctx, n->print.args[i]); fprintf(stderr, "DEBUG expr: type=%d val=%p\n", r.chaos_type, (void*)r.val);
+                ExprResult r = expr(ctx, n->print.args[i]);
                 LLVMValueRef val = r.val;
                 
                 if (r.chaos_type == TYPE_TEXT) {
-                    LLVMValueRef puts_fn = get_puts_fn(ctx); fprintf(stderr, "DEBUG puts_fn=%p\n", (void*)puts_fn);
+                    LLVMValueRef puts_fn = get_puts_fn(ctx);
                     LLVMValueRef args[] = { val };
-                    LLVMTypeRef i8ptr = LLVMPointerType(LLVMInt8Type(), 0);
-                    LLVMTypeRef _pty = LLVMFunctionType(LLVMInt32Type(), &i8ptr, 1, 0);
-                    LLVMBuildCall2(ctx->b, _pty, puts_fn, args, 1, "");
+                    LLVMBuildCall2(ctx->b, puts_type, puts_fn, args, 1, "");
                 } else {
-                    LLVMValueRef printf_fn = get_printf_fn(ctx);
-                    LLVMValueRef fmt = LLVMBuildGlobalStringPtr(ctx->b, "%d\\n", "fmt");
-                    LLVMValueRef args[] = { fmt, val };
-                    LLVMTypeRef i8ptr2 = LLVMPointerType(LLVMInt8Type(), 0);
-                    LLVMTypeRef _pfty = LLVMFunctionType(LLVMInt32Type(), &i8ptr2, 1, 1);
-                    LLVMBuildCall2(ctx->b, _pfty, printf_fn, args, 2, "");
+                    LLVMValueRef printf_fn = LLVMGetNamedFunction(ctx->mod, "printf");
+                    if (!printf_fn) {
+                        LLVMTypeRef i8ptr = LLVMPointerType(LLVMInt8Type(), 0);
+                        LLVMTypeRef pt = LLVMFunctionType(LLVMInt32Type(), &i8ptr, 1, 1);
+                        printf_fn = LLVMAddFunction(ctx->mod, "printf", pt);
+                    }
+                    LLVMValueRef val32 = val;
+                    if (LLVMTypeOf(val) != LLVMInt32Type())
+                        val32 = LLVMBuildIntCast(ctx->b, val, LLVMInt32Type(), "cast");
+                    LLVMValueRef fmt = LLVMBuildGlobalStringPtr(ctx->b, "%d\n", "fmt");
+                    LLVMValueRef args[] = { fmt, val32 };
+                    LLVMTypeRef ft = LLVMTypeOf(printf_fn);
+                    LLVMBuildCall2(ctx->b, ft, printf_fn, args, 2, "");
                 }
             }
             break;
