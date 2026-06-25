@@ -1,4 +1,7 @@
 #include "codegen.h"
+
+AstNode* root_ast = NULL;
+
 #include <stdio.h>
 #include <string.h>
 
@@ -56,6 +59,7 @@ static void generate_func_body(CodegenContext* ctx, AstNode* n) {
 }
 
 void codegen_program(CodegenContext* ctx, AstNode* root) {
+    root_ast = root;
     // Phase 1: declare all functions + create dummy for builder position
     LLVMTypeRef dummy_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, 0);
     LLVMValueRef dummy_fn = LLVMAddFunction(ctx->mod, "__dummy", dummy_type);
@@ -84,6 +88,9 @@ void codegen_program(CodegenContext* ctx, AstNode* root) {
         if (root->block.statements[i]->type == AST_FUNC_DEF)
             generate_func_body(ctx, root->block.statements[i]);
     }
+    
+    fprintf(stderr, "After Phase 2:\n");
+    LLVMDumpModule(ctx->mod);
     
     // Phase 3: create main
     LLVMTypeRef main_type = LLVMFunctionType(LLVMInt64Type(), NULL, 0, 0);
