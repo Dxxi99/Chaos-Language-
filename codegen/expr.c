@@ -95,17 +95,8 @@ ExprResult expr(CodegenContext* ctx, AstNode* n) {
                 fprintf(stderr, "FATAL: function '%s' not registered\n", n->func_call.name);
                 exit(1);
             }
-            fprintf(stderr, "DEBUG CALL: name=%s fn=%p fn_ty=%p ret=%d args[0]=%p args[1]=%p\n", 
-                    n->func_call.name, (void*)fn, (void*)fn_ty,
-                    (int)LLVMGetTypeKind(LLVMGetReturnType(fn_ty)),
-                    ac > 0 ? (void*)args[0] : NULL, ac > 1 ? (void*)args[1] : NULL);
-            fprintf(stderr, "DEBUG CALL: fn_ty ret=%d\n", n->func_call.name, 
-                    (int)LLVMGetTypeKind(LLVMGetReturnType(fn_ty)));
-            // Direct call: bypass LLVMBuildCall2
-            // Just return 0 for now - function inlining will handle this
-            (void)fn_ty;
-            (void)fn;
-            r.val = cb_const_zero();
+                        
+            r.val = LLVMBuildCall2(ctx->b, fn_ty, fn, args, ac, "");
             if (args) free(args);
             LLVMTypeRef ret_ty = LLVMGetReturnType(fn_ty);
             LLVMTypeKind rk = LLVMGetTypeKind(ret_ty);

@@ -205,9 +205,6 @@ void stmt(CodegenContext* ctx, AstNode* n) {
             }
             break;
             
-        case AST_FUNC_CALL:
-            // Skip: already handled in expr during print evaluation
-            break;
         default:
             // Expression statement
             { ExprResult er = expr(ctx, n); (void)er; }
